@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PartDex - Prateleira Digital</title>
+    <style>
+        /* --- CSS ESTILO WHATSAPP (PartDex Theme) --- */
+        :root {
+            --wa-bg-color: #E5DDD5;
+            --wa-header-color: #075E54;
+            --wa-header-text: #FFFFFF;
+            --wa-chat-incoming: #FFFFFF;
+            --wa-chat-outgoing: #DCF8C6;
+            --wa-accent: #128C7E;
+            --wa-dark-text: #303030;
+            --wa-light-text: #8C8C8C;
+        }
+
+        body, html {
+            margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: #dcdcdc; height: 100%; display: flex; justify-content: center; align-items: center;
+        }
+
+        .phone-container {
+            width: 100%; max-width: 414px; height: 100vh; max-height: 896px;
+            background-color: var(--wa-bg-color); display: flex; flex-direction: column;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;
+        }
+
+        .chat-header {
+            background-color: var(--wa-header-color); color: var(--wa-header-text); padding: 10px 15px;
+            display: flex; align-items: center; z-index: 10;
+        }
+
+        .header-avatar {
+            width: 40px; height: 40px; background-color: #ccc; border-radius: 50%; margin-right: 10px;
+            background-image: url('https://placehold.co/40x40/128C7E/FFFFFF/png?text=PD'); /* PD = PartDex */
+            background-size: cover;
+        }
+
+        .header-info h4 { margin: 0; font-size: 16px; font-weight: 500; }
+        .header-info p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.8; }
+
+        .chat-box {
+            flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 10px;
+        }
+
+        .message {
+            max-width: 85%; padding: 8px 12px; border-radius: 8px; position: relative;
+            font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word;
+        }
+
+        .message.received { background-color: var(--wa-chat-incoming); align-self: flex-start; border-top-left-radius: 0; }
+        .message.sent { background-color: var(--wa-chat-outgoing); align-self: flex-end; border-top-right-radius: 0; color: var(--wa-dark-text); }
+        
+        .message-time {
+            display: block; font-size: 10px; color: var(--wa-light-text); text-align: right; margin-top: 4px;
+        }
+
+        /* CARD DE PEÇA */
+        .part-card {
+            background: #f9f9f9; border-radius: 8px; overflow: hidden; margin-top: 5px; border: 1px solid #eee;
+        }
+        .part-card-body { padding: 10px; }
+        .part-card-title { font-weight: bold; font-size: 15px; margin-bottom: 5px; color: var(--wa-dark-text); display: flex; justify-content: space-between; }
+        .part-card-detail { font-size: 13px; color: #555; margin-bottom: 2px; }
+        .id-tag { background: #333; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
+
+        /* DASHBOARD GRID */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+        .dash-card {
+            background: white; padding: 10px; border-radius: 8px; text-align: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 3px solid var(--wa-accent);
+        }
+        .dash-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
+
+        .chat-input-area { background-color: #F0F0F0; padding: 10px; display: flex; align-items: center; }
+        .chat-input { flex: 1; border: none; border-radius: 20px; padding: 10px 15px; font-size: 15px; outline: none; }
+        .send-btn {
+            background-color: var(--wa-accent); color: white; border: none; width: 40px; height: 40px;
+            border-radius: 50%; margin-left: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="phone-container">
+    <div class="chat-header">
+        <div class="header-avatar"></div>
+        <div class="header-info">
+            <h4>PartDex ⚙️</h4>
+            <p>online</p>
+        </div>
+    </div>
+
+    <div class="chat-box" id="chat-box"></div>
+
+    <div class="chat-input-area">
+        <input type="text" class="chat-input" id="user-input" placeholder="Digite aqui...">
+        <button class="send-btn" onclick="sendMessage()">➤</button>
+    </div>
+</div>
+
+<script>
+    /* --- 1. BANCO DE DADOS & PERSISTÊNCIA --- */
+    let db = JSON.parse(localStorage.getItem('partdexDB')) || {
+        vehicles: [],
+        parts: []
+    };
+
+    function saveData() {
+        localStorage.setItem('partdexDB', JSON.stringify(db));
+    }
+
+    /* --- 2. CONFIGURAÇÃO INICIAL --- */
+    let state = 'MAIN'; 
+    let temp = {}; 
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+
+    // Início Automático
+    window.onload = function() {
+        setTimeout(() => resetToMenu(true), 500);
+    };
+
+    /* --- 3. CORE DO CHAT --- */
+    function sendMessage() {
+        const text = userInput.value.trim();
+        if (!text) return;
+        addMsg(text, 'sent');
+        userInput.value = '';
+        setTimeout(() => processResponse(text), 400); 
+    }
+
+    userInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
+
+    function addMsg(text, type, isHtml = false) {
+        const div = document.createElement('div');
+        div.className = `message ${type}`;
+        div.innerHTML = isHtml ? text : text.replace(/\n/g, '<br>');
+        
+        const time = document.createElement('span');
+        time.className = 'message-time';
+        const d = new Date();
+        time.innerText = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
+        div.appendChild(time);
+        
+        chatBox.appendChild(div);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    /* --- 4. LÓGICA DE NEGÓCIOS --- */
+    function processResponse(msg) {
+        const m = msg.toLowerCase();
+
+        // SAÍDA GLOBAL
+        if (['menu', 'sair', 'cancelar', 'voltar'].includes(m)) {
+            resetToMenu(false);
+            return;
+        }
+
+        switch (state) {
+            case 'MAIN':
+                if (m === '1' || m.includes('cadastrar')) {
+                    state = 'REG_VEHICLE';
+                    addMsg("📝 <b>Cadastro</b><br>Qual o número do carro?", 'received', true);
+                } 
+                else if (m === '2' || (m.includes('consultar') && !m.includes('frota'))) {
+                    state = 'SEARCH';
+                    addMsg("🔍 O que você procura? (Ex: 'Correia' ou 'Filtro 535')", 'received');
+                }
+                else if (m === '3' || m.includes('frota')) {
+                    showFleetSummary();
+                    state = 'VIEW_FLEET_DETAIL'; 
+                    addMsg("Digite o <b>número do carro</b> para ver as peças dele.", 'received', true);
+                }
+                else if (m === '4' || m.includes('excluir')) {
+                    state = 'DELETE_SEARCH';
+                    addMsg("🗑️ <b>Exclusão</b><br>Qual peça apagar? (Busque ex: 'Correia 535')", 'received', true);
+                }
+                else {
+                    if (m.length > 2) { doSmartSearch(msg, false); } 
+                    else { addMsg("Não entendi. Digite <b>Menu</b>.", 'received', true); }
+                }
+                break;
+
+            /* --- CADASTRO --- */
+            case 'REG_VEHICLE':
+                const vInput = msg.toUpperCase();
+                temp.vehicle = vInput;
+                
+                if (!db.vehicles.includes(vInput)) {
+                    db.vehicles.push(vInput);
+                    saveData(); 
+                }
+                
+                addMsg(`✅ Carro <b>${vInput}</b> selecionado.`, 'received', true);
+                state = 'REG_PART_NAME';
+                addMsg(`Qual <b>peça</b> adicionar ao ${vInput}?`, 'received', true);
+                break;
+
+            case 'REG_PART_NAME':
+                temp.partName = msg; 
+                state = 'REG_PART_CODE';
+                addMsg(`🔧 Peça: <b>${temp.partName}</b>.<br>Qual a referência/código?`, 'received', true);
+                break;
+
+            case 'REG_PART_CODE':
+                temp.partCode = msg.toUpperCase();
+                savePart(); 
+                state = 'REG_LOOP_DECISION';
+                addMsg(`✅ <b>Salvo!</b><br>Adicionar mais itens no <b>${temp.vehicle}</b>?<br>(Sim / Não)`, 'received', true);
+                break;
+
+            case 'REG_LOOP_DECISION':
+                if (m.includes('s') || m.includes('sim') || m.includes('mais')) {
+                    state = 'REG_PART_NAME';
+                    addMsg("Qual a próxima peça?", 'received');
+                } else {
+                    addMsg("Cadastro finalizado.", 'received');
+                    resetToMenu(false);
+                }
+                break;
+
+            /* --- VISUALIZAÇÃO --- */
+            case 'SEARCH':
+                doSmartSearch(msg, false);
+                state = 'MAIN';
+                break;
+
+            case 'VIEW_FLEET_DETAIL':
+                const carId = msg.toUpperCase();
+                if (db.vehicles.includes(carId)) {
+                    showCarParts(carId);
+                    state = 'MAIN';
+                } else {
+                    addMsg(`⚠️ Carro ${carId} não encontrado. Tente outro.`, 'received');
+                }
+                break;
+
+            /* --- EXCLUSÃO --- */
+            case 'DELETE_SEARCH':
+                const found = doSmartSearch(msg, true); 
+                if (found) {
+                    state = 'DELETE_CONFIRM';
+                    addMsg("⚠️ Digite o <b>número ID</b> (etiqueta preta) para apagar:", 'received', true);
+                } else {
+                    addMsg("Não achei. Tente buscar de outra forma.", 'received');
+                }
+                break;
+
+            case 'DELETE_CONFIRM':
+                const idDel = parseInt(m);
+                const idx = db.parts.findIndex(p => p.id === idDel);
+                if (idx > -1) {
+                    const removed = db.parts.splice(idx, 1)[0];
+                    saveData(); 
+                    addMsg(`🗑️ <b>${removed.name}</b> removido.`, 'received', true);
+                    resetToMenu(false);
+                } else {
+                    addMsg("❌ ID inválido. Digite o número da etiqueta preta.", 'received');
+                }
+                break;
+        }
+    }
+
+    // --- FUNÇÕES AUXILIARES ---
+
+    function resetToMenu(isStart) {
+        state = 'MAIN';
+        temp = {};
+        let greeting = isStart ? "👋 Bem-vindo ao <b>PartDex</b>.<br>" : "";
+        addMsg(`${greeting}📋 <b>Menu Principal</b><br><br>1️⃣ Cadastrar Peça<br>2️⃣ Consultar Peça<br>3️⃣ Consultar Frota<br>4️⃣ Excluir Peça`, 'received', true);
+    }
+
+    function savePart() {
+        const nextId = db.parts.length > 0 ? Math.max(...db.parts.map(p => p.id)) + 1 : 101;
+        db.parts.push({
+            id: nextId,
+            vehicle: temp.vehicle,
+            name: temp.partName,
+            code: temp.partCode
+        });
+        saveData(); 
+    }
+
+    function showFleetSummary() {
+        let html = '<div class="dashboard-grid">';
+        if(db.vehicles.length === 0) { addMsg("Garagem vazia.", 'received'); return; }
+
+        db.vehicles.forEach(v => {
+            const count = db.parts.filter(p => p.vehicle === v).length;
+            html += `
+                <div class="dash-card">
+                    <div class="dash-title">🚗 ${v}</div>
+                    <div style="font-size:12px; color:#666;">${count} itens</div>
+                </div>
+            `;
+        });
+        html += '</div>';
+        addMsg(html, 'received', true);
+    }
+
+    function showCarParts(carId) {
+        const parts = db.parts.filter(p => p.vehicle === carId);
+        if (parts.length === 0) {
+            addMsg(`O carro ${carId} não tem peças cadastradas.`, 'received');
+        } else {
+            addMsg(`🛠️ <b>Peças do ${carId}:</b>`, 'received', true);
+            parts.forEach(p => {
+                const html = `
+                    <div class="part-card">
+                        <div class="part-card-body">
+                            <div class="part-card-title">${p.name}</div>
+                            <div class="part-card-detail">🔢 Ref: ${p.code}</div>
+                        </div>
+                    </div>`;
+                addMsg(html, 'received', true);
+            });
+        }
+    }
+
+    function doSmartSearch(query, isDeleteMode) {
+        const terms = query.toLowerCase().split(' ').filter(t => t.length > 0);
+        if (terms.length === 0) return false;
+
+        const results = db.parts.filter(p => {
+            const fullString = (p.name + " " + p.code + " " + p.vehicle).toLowerCase();
+            return terms.every(term => fullString.includes(term));
+        });
+
+        if (results.length === 0) {
+            addMsg(`🚫 Nada encontrado para "${query}".`, 'received');
+            return false;
+        } else {
+            addMsg(`🔎 Encontrei ${results.length} resultados:`, 'received');
+            results.forEach(p => {
+                const idDisplay = isDeleteMode ? `<span class="id-tag">${p.id}</span>` : '';
+                const html = `
+                    <div class="part-card">
+                        <div class="part-card-body">
+                            <div class="part-card-title">${p.name} ${idDisplay}</div>
+                            <div class="part-card-detail">🚗 ${p.vehicle} | 🔢 ${p.code}</div>
+                        </div>
+                    </div>`;
+                addMsg(html, 'received', true);
+            });
+            return true;
+        }
+    }
+</script>
+</body>
+</html>
