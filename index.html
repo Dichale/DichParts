@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>PartDex - App</title>
+    <title>PartDex - Compact</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* --- CSS BASE E RESET --- */
+        /* --- CSS RESET E VARIÁVEIS --- */
         :root {
             --wa-bg-color: #E5DDD5;
             --wa-header-color: #075E54;
@@ -19,12 +19,13 @@
         * { box-sizing: border-box; }
         
         body, html { 
-            margin: 0; 
-            padding: 0; 
+            margin: 0; padding: 0; 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #dcdcdc; 
+            background-color: #333; /* Fundo escuro no PC */
             height: 100%; 
-            overflow: hidden; /* Impede rolagem da página inteira */
+            overflow: hidden; /* Trava rolagem externa */
+            position: fixed; /* Fixa o corpo para evitar pulos no iOS */
+            width: 100%;
         }
 
         /* CONTAINER PRINCIPAL */
@@ -32,112 +33,103 @@
             display: flex; 
             flex-direction: column; 
             background-color: var(--wa-bg-color); 
-            position: relative;
-            overflow: hidden;
             width: 100%;
-            height: 100%;
+            height: 100%; /* Será ajustado via JS */
+            position: relative;
         }
 
-        /* ESTILO PARA PC (CENTRALIZADO) */
+        /* AJUSTE PARA PC (Centralizado) */
         @media (min-width: 768px) {
-            body {
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                background-color: #333; /* Fundo escuro no PC pra destacar */
-            }
+            body { display: flex; justify-content: center; align-items: center; }
             .phone-container {
                 max-width: 400px;
-                max-height: 850px;
-                height: 95vh;
-                border-radius: 20px;
-                box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+                height: 90vh !important; /* No PC fixa a altura */
+                border-radius: 15px;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
                 border: 1px solid #444;
             }
         }
 
-        /* HEADER */
+        /* HEADER (Mais compacto) */
         .chat-header { 
             background-color: var(--wa-header-color); 
             color: var(--wa-header-text); 
-            padding: 10px 15px; 
-            padding-top: env(safe-area-inset-top); /* Protege contra o "notch" do iPhone */
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between; 
-            z-index: 10; 
-            height: 60px;
-            flex-shrink: 0;
+            padding: 8px 12px; 
+            padding-top: max(8px, env(safe-area-inset-top));
+            display: flex; align-items: center; justify-content: space-between; 
+            z-index: 10; height: 50px; flex-shrink: 0;
             box-shadow: 0 1px 2px rgba(0,0,0,0.1);
         }
-        .header-left { display: flex; align-items: center; }
-        .header-avatar { width: 36px; height: 36px; background-color: #ccc; border-radius: 50%; margin-right: 10px; background-image: url('https://placehold.co/40x40/128C7E/FFFFFF/png?text=PD'); background-size: cover; }
-        .header-info h4 { margin: 0; font-size: 15px; font-weight: 600; }
-        .header-info p { margin: 1px 0 0 0; font-size: 11px; opacity: 0.8; }
-        .id-badge { font-size: 10px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; font-weight: bold; letter-spacing: 0.5px; }
+        .header-avatar { width: 32px; height: 32px; background-color: #ccc; border-radius: 50%; margin-right: 8px; background-image: url('https://placehold.co/40x40/128C7E/FFFFFF/png?text=PD'); background-size: cover; }
+        .header-info h4 { margin: 0; font-size: 14px; font-weight: 600; }
+        .header-info p { margin: 0; font-size: 10px; opacity: 0.8; }
+        .id-badge { font-size: 9px; background: rgba(0,0,0,0.3); padding: 2px 5px; border-radius: 4px; font-weight: bold; }
 
-        /* ÁREA DE CHAT */
+        /* ÁREA DE CHAT (Compacta) */
         .chat-box { 
             flex: 1; 
             overflow-y: auto; 
-            padding: 15px 10px; 
+            padding: 10px 8px; 
             display: flex; 
             flex-direction: column; 
-            gap: 8px; 
-            -webkit-overflow-scrolling: touch; /* Rolagem suave no iOS */
+            gap: 6px; /* Menos espaço entre mensagens */
+            -webkit-overflow-scrolling: touch; 
         }
+        
         .message { 
-            max-width: 85%; 
-            padding: 8px 10px; 
-            border-radius: 7px; 
+            max-width: 88%; 
+            padding: 6px 10px; /* Balão menor */
+            border-radius: 6px; 
             position: relative; 
-            font-size: 14px; /* Tamanho de fonte ideal mobile */
+            font-size: 13px; /* Fonte menor para caber mais */
             line-height: 1.3; 
             box-shadow: 0 1px 1px rgba(0,0,0,0.1); 
             word-wrap: break-word; 
         }
         .message.received { background-color: var(--wa-chat-incoming); align-self: flex-start; border-top-left-radius: 0; }
         .message.sent { background-color: var(--wa-chat-outgoing); align-self: flex-end; border-top-right-radius: 0; color: var(--wa-dark-text); }
-        .message-time { display: block; font-size: 9px; color: #8C8C8C; text-align: right; margin-top: 3px; }
+        .message-time { display: block; font-size: 9px; color: #999; text-align: right; margin-top: 2px; }
 
-        /* CARDS DE PEÇAS */
-        .part-card { background: #f9f9f9; border-radius: 6px; overflow: hidden; margin-top: 5px; border: 1px solid #eee; }
-        .part-card-body { padding: 8px; }
-        .part-card-title { font-weight: bold; font-size: 14px; margin-bottom: 4px; color: var(--wa-dark-text); display: flex; justify-content: space-between; align-items: center; }
-        .part-card-detail { font-size: 12px; color: #555; margin-bottom: 2px; }
-        .id-tag { background: #333; color: #fff; padding: 2px 5px; border-radius: 3px; font-size: 9px; }
+        /* CARDS DE PEÇAS (Super Compactos) */
+        .part-card { background: #f9f9f9; border-radius: 5px; overflow: hidden; margin-top: 4px; border: 1px solid #eee; }
+        .part-card-body { padding: 6px 8px; }
+        .part-card-title { font-weight: bold; font-size: 13px; margin-bottom: 2px; color: var(--wa-dark-text); display: flex; justify-content: space-between; align-items: center; }
+        .part-card-detail { font-size: 11px; color: #555; margin-bottom: 1px; }
+        .id-tag { background: #333; color: #fff; padding: 1px 4px; border-radius: 3px; font-size: 9px; }
         
-        /* DASHBOARD GRID */
-        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 8px; }
-        .dash-card { background: white; padding: 8px; border-radius: 6px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border-top: 3px solid var(--wa-accent); }
-        .dash-title { font-weight: bold; font-size: 12px; margin-bottom: 2px; }
+        /* DASHBOARD GRID (Menor) */
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 5px; }
+        .dash-card { background: white; padding: 6px; border-radius: 5px; text-align: center; box-shadow: 0 1px 1px rgba(0,0,0,0.1); border-top: 2px solid var(--wa-accent); }
+        .dash-title { font-weight: bold; font-size: 11px; margin-bottom: 1px; }
 
-        /* INPUT AREA */
+        /* ÁREA DE INPUT (Fixa e Segura) */
         .chat-input-area { 
             background-color: #F0F0F0; 
-            padding: 8px; 
-            padding-bottom: max(8px, env(safe-area-inset-bottom)); /* Protege em iPhones sem botão home */
+            padding: 6px 8px; 
+            /* Importante para iOS: */
+            padding-bottom: max(6px, env(safe-area-inset-bottom));
             display: flex; 
             align-items: center; 
             flex-shrink: 0;
+            border-top: 1px solid #ddd;
         }
         .chat-input { 
             flex: 1; 
             border: none; 
-            border-radius: 20px; 
-            padding: 10px 15px; 
-            font-size: 16px; /* 16px impede zoom automático no iPhone ao clicar */
+            border-radius: 18px; 
+            padding: 8px 12px; 
+            font-size: 16px; /* Mantém 16px para evitar zoom do iOS, mas visualmente parece menor */
             outline: none; 
             background: #fff;
+            height: 36px;
         }
-        .send-btn { background-color: var(--wa-accent); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; margin-left: 8px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 18px; }
+        .send-btn { background-color: var(--wa-accent); color: white; border: none; width: 36px; height: 36px; border-radius: 50%; margin-left: 6px; cursor: pointer; display: flex; justify-content: center; align-items: center; font-size: 16px; }
 
-        /* TELA DE LOGIN (ACESSO) */
-        #login-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: var(--wa-bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
-        .login-box { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 100%; max-width: 320px; }
-        .login-title { color: var(--wa-header-color); margin-bottom: 20px; font-size: 22px; }
-        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 8px; font-size: 16px; text-align: center; text-transform: uppercase; -webkit-appearance: none; }
-        .login-btn { background-color: var(--wa-accent); color: white; padding: 12px; border: none; border-radius: 8px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        /* LOGIN SCREEN */
+        #login-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: var(--wa-bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; }
+        .login-box { background: white; padding: 20px; border-radius: 10px; width: 100%; max-width: 300px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .login-input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 5px; text-align: center; font-size: 16px; text-transform: uppercase; }
+        .login-btn { background: var(--wa-accent); color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; font-weight: bold; }
         
         #loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.95); display: none; justify-content: center; align-items: center; z-index: 200; flex-direction: column;}
     </style>
@@ -148,16 +140,16 @@
     
     <div id="login-screen">
         <div class="login-box">
-            <h2 class="login-title">PartDex ☁️</h2>
-            <p style="font-size:14px; color:#666; margin-bottom:20px;">Digite seu Código de Acesso:</p>
-            <input type="text" id="access-code-input" class="login-input" placeholder="EX: OFICINA01">
+            <h3 style="margin:0; color:#075E54;">PartDex ☁️</h3>
+            <p style="font-size:12px; color:#666;">Acesso à Frota</p>
+            <input type="text" id="access-code-input" class="login-input" placeholder="CÓDIGO DA FROTA">
             <button class="login-btn" onclick="handleLogin()">ENTRAR</button>
         </div>
     </div>
 
     <div id="loading-overlay">
-        <div style="font-size:40px; margin-bottom:15px; animation: bounce 1s infinite;">☁️</div>
-        <div id="loading-text" style="color:#555;">Sincronizando...</div>
+        <div style="font-size:30px; margin-bottom:10px; animation: bounce 1s infinite;">☁️</div>
+        <div id="loading-text" style="font-size:12px; color:#555;">Carregando...</div>
     </div>
 
     <div class="chat-header">
@@ -174,14 +166,27 @@
     <div class="chat-box" id="chat-box"></div>
 
     <div class="chat-input-area">
-        <input type="text" class="chat-input" id="user-input" placeholder="Digite aqui..." autocomplete="off">
+        <input type="text" class="chat-input" id="user-input" placeholder="Digite..." autocomplete="off">
         <button class="send-btn" onclick="sendMessage()">➤</button>
     </div>
 </div>
 
 <script>
+    /* === FIX DO TECLADO (Visual Viewport API) === */
+    // Isso garante que o site encolha quando o teclado sobe
+    function adjustHeight() {
+        const vh = window.innerHeight * 0.01;
+        document.documentElement.style.setProperty('--vh', `${vh}px`);
+        // Ajusta container apenas se for mobile
+        if(window.innerWidth < 768) {
+            document.querySelector('.phone-container').style.height = `${window.innerHeight}px`;
+        }
+    }
+    window.addEventListener('resize', adjustHeight);
+    adjustHeight();
+
     /* ============================================================
-       CONFIGURAÇÃO DO SUPABASE
+       CONFIGURAÇÃO SUPABASE
        ============================================================ */
     const SUPABASE_URL = 'https://exrnklefvzfkhtmgfurn.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4cm5rbGVmdnpma2h0bWdmdXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwOTk2NjcsImV4cCI6MjA4MjY3NTY2N30.wpPJr594-fmxqT33v1pfu2hDYla565CaeZQar0HZWYQ';
@@ -193,8 +198,9 @@
     let db = { vehicles: [], parts: [] };
     let CLIENT_ID = null;
 
-    /* --- LOGIN E INICIALIZAÇÃO --- */
+    /* --- LOGIN --- */
     window.onload = function() {
+        adjustHeight();
         const savedId = localStorage.getItem('partdex_client_id');
         if (savedId) {
             document.getElementById('access-code-input').value = savedId;
@@ -204,80 +210,47 @@
 
     async function handleLogin(manualId = null) {
         let code = manualId || document.getElementById('access-code-input').value.trim().toUpperCase();
-        
-        if (!code || code.length < 3) {
-            alert("Código inválido (mínimo 3 caracteres).");
-            return;
-        }
-
+        if (!code || code.length < 3) { alert("Código muito curto."); return; }
         code = code.replace(/[^A-Z0-9-_]/g, ''); 
         
-        // Esconde o teclado no mobile
-        document.getElementById('access-code-input').blur();
-
-        showLoading("Acessando Nuvem...");
+        document.getElementById('access-code-input').blur(); // Fecha teclado
+        showLoading("Sincronizando...");
         CLIENT_ID = code;
         
         try {
-            let { data, error } = await _supabase
-                .from('fleet_data')
-                .select('content')
-                .eq('id', CLIENT_ID)
-                .single();
+            let { data, error } = await _supabase.from('fleet_data').select('content').eq('id', CLIENT_ID).single();
+            if (error && error.code !== 'PGRST116') throw error;
 
-            if (error && error.code !== 'PGRST116') { 
-                throw error;
-            }
-
-            if (data && data.content) {
-                db = data.content; 
-            } else {
-                db = { vehicles: [], parts: [] };
-                await _supabase.from('fleet_data').insert([{ id: CLIENT_ID, content: db }]);
-            }
+            if (data && data.content) { db = data.content; } 
+            else { db = { vehicles: [], parts: [] }; await _supabase.from('fleet_data').insert([{ id: CLIENT_ID, content: db }]); }
 
             localStorage.setItem('partdex_client_id', CLIENT_ID);
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('display-id').innerText = CLIENT_ID;
             hideLoading();
             resetToMenu(true);
-
         } catch (err) {
             console.error(err);
-            alert("Erro de conexão.");
-            hideLoading();
+            alert("Erro de conexão."); hideLoading();
         }
     }
 
     async function saveCloud() {
         if (!CLIENT_ID) return;
         const statusEl = document.getElementById('display-id');
-        statusEl.innerText = "Salvando...";
-        
+        statusEl.innerText = "Salvar...";
         try {
-            const { error } = await _supabase
-                .from('fleet_data')
-                .update({ content: db })
-                .eq('id', CLIENT_ID);
-
+            const { error } = await _supabase.from('fleet_data').update({ content: db }).eq('id', CLIENT_ID);
             if (error) throw error;
-            statusEl.innerText = "Salvo ✓";
+            statusEl.innerText = "Ok";
             setTimeout(() => statusEl.innerText = CLIENT_ID, 2000);
-        } catch (err) {
-            console.error("Erro ao salvar:", err);
-            statusEl.innerText = "Erro";
-        }
+        } catch (err) { statusEl.innerText = "Erro"; }
     }
 
-    function showLoading(msg) {
-        document.getElementById('loading-overlay').style.display = 'flex';
-        document.getElementById('loading-text').innerText = msg;
-    }
-    function hideLoading() {
-        document.getElementById('loading-overlay').style.display = 'none';
-    }
+    function showLoading(msg) { document.getElementById('loading-overlay').style.display = 'flex'; document.getElementById('loading-text').innerText = msg; }
+    function hideLoading() { document.getElementById('loading-overlay').style.display = 'none'; }
 
-    /* --- LÓGICA DO CHAT --- */
+    /* --- CHAT ENGINE --- */
     let state = 'MAIN'; 
     let temp = {}; 
     const chatBox = document.getElementById('chat-box');
@@ -288,11 +261,9 @@
         if (!text) return;
         addMsg(text, 'sent');
         userInput.value = '';
-        // Mantém foco no mobile
-        userInput.focus();
-        setTimeout(() => processResponse(text), 400); 
+        userInput.focus(); // Mantém teclado aberto para digitar rápido
+        setTimeout(() => processResponse(text), 300); 
     }
-
     userInput.addEventListener("keypress", (e) => { if(e.key === "Enter") sendMessage(); });
 
     function addMsg(text, type, isHtml = false) {
@@ -306,167 +277,107 @@
         time.innerText = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
         div.appendChild(time);
         chatBox.appendChild(div);
-        chatBox.scrollTop = chatBox.scrollHeight;
+        
+        // Scroll com delay para garantir que o teclado já subiu
+        setTimeout(() => { chatBox.scrollTop = chatBox.scrollHeight; }, 100);
     }
 
     function processResponse(msg) {
         const m = msg.toLowerCase();
-
-        if (['menu', 'sair', 'cancelar', 'voltar'].includes(m)) {
-            resetToMenu(false);
-            return;
-        }
+        if (['menu', 'sair', 'cancelar', 'voltar'].includes(m)) { resetToMenu(false); return; }
 
         switch (state) {
             case 'MAIN':
                 if (m === '1' || m.includes('cadastrar')) {
                     state = 'REG_VEHICLE';
-                    addMsg("📝 <b>Cadastro</b><br>Qual o número do carro?", 'received', true);
+                    addMsg("📝 <b>Cadastro</b><br>Qual o nº do carro?", 'received', true);
                 } 
                 else if (m === '2' || (m.includes('consultar') && !m.includes('frota'))) {
                     state = 'SEARCH';
-                    addMsg("🔍 O que você procura? (Ex: 'Correia' ou 'Filtro 535')", 'received');
+                    addMsg("🔍 O que busca? (Ex: 'Correia 535')", 'received');
                 }
                 else if (m === '3' || m.includes('frota')) {
                     showFleetSummary();
                     state = 'VIEW_FLEET_DETAIL'; 
-                    addMsg("Digite o <b>número do carro</b> para ver as peças dele.", 'received', true);
+                    addMsg("Digite o <b>nº do carro</b> p/ ver peças.", 'received', true);
                 }
                 else if (m === '4' || m.includes('excluir')) {
                     state = 'DELETE_SEARCH';
-                    addMsg("🗑️ <b>Exclusão</b><br>Qual peça apagar? (Busque ex: 'Correia 535')", 'received', true);
+                    addMsg("🗑️ <b>Exclusão</b><br>Busque a peça (Ex: 'Filtro').", 'received', true);
                 }
-                else {
-                    if (m.length > 2) { doSmartSearch(msg, false); } 
-                    else { addMsg("Não entendi. Digite <b>Menu</b>.", 'received', true); }
-                }
+                else { if (m.length > 2) { doSmartSearch(msg, false); } else { addMsg("Digite <b>Menu</b>.", 'received', true); } }
                 break;
 
             case 'REG_VEHICLE':
                 const vInput = msg.toUpperCase();
                 temp.vehicle = vInput;
-                if (!db.vehicles.includes(vInput)) {
-                    db.vehicles.push(vInput);
-                    saveCloud(); 
-                }
-                addMsg(`✅ Carro <b>${vInput}</b> selecionado.`, 'received', true);
+                if (!db.vehicles.includes(vInput)) { db.vehicles.push(vInput); saveCloud(); }
+                addMsg(`✅ <b>${vInput}</b> selecionado.`, 'received', true);
                 state = 'REG_PART_NAME';
-                addMsg(`Qual <b>peça</b> adicionar ao ${vInput}?`, 'received', true);
+                addMsg(`Qual a <b>peça</b>?`, 'received', true);
                 break;
 
             case 'REG_PART_NAME':
-                temp.partName = msg; 
-                state = 'REG_PART_CODE';
-                addMsg(`🔧 Peça: <b>${temp.partName}</b>.<br>Qual a referência/código?`, 'received', true);
+                temp.partName = msg; state = 'REG_PART_CODE';
+                addMsg(`🔧 <b>${temp.partName}</b>.<br>Qual o código/ref?`, 'received', true);
                 break;
 
             case 'REG_PART_CODE':
-                temp.partCode = msg.toUpperCase();
-                savePart(); 
-                state = 'REG_LOOP_DECISION';
-                addMsg(`✅ <b>Salvo!</b><br>Adicionar mais itens no <b>${temp.vehicle}</b>?<br>(Sim / Não)`, 'received', true);
+                temp.partCode = msg.toUpperCase(); savePart(); state = 'REG_LOOP_DECISION';
+                addMsg(`✅ <b>Salvo!</b><br>Mais itens no <b>${temp.vehicle}</b>? (Sim/Não)`, 'received', true);
                 break;
 
             case 'REG_LOOP_DECISION':
-                if (m.includes('s') || m.includes('sim') || m.includes('mais')) {
-                    state = 'REG_PART_NAME';
-                    addMsg("Qual a próxima peça?", 'received');
-                } else {
-                    addMsg("Cadastro finalizado.", 'received');
-                    resetToMenu(false);
-                }
+                if (m.includes('s') || m.includes('sim')) { state = 'REG_PART_NAME'; addMsg("Próxima peça?", 'received'); } 
+                else { addMsg("Fim.", 'received'); resetToMenu(false); }
                 break;
 
-            case 'SEARCH':
-                doSmartSearch(msg, false);
-                state = 'MAIN';
-                break;
-
+            case 'SEARCH': doSmartSearch(msg, false); state = 'MAIN'; break;
             case 'VIEW_FLEET_DETAIL':
                 const carId = msg.toUpperCase();
-                if (db.vehicles.includes(carId)) {
-                    showCarParts(carId);
-                    state = 'MAIN';
-                } else {
-                    addMsg(`⚠️ Carro ${carId} não encontrado. Tente outro.`, 'received');
-                }
+                if (db.vehicles.includes(carId)) { showCarParts(carId); state = 'MAIN'; } 
+                else { addMsg(`⚠️ Carro ${carId} não existe.`, 'received'); }
                 break;
-
             case 'DELETE_SEARCH':
-                const found = doSmartSearch(msg, true); 
-                if (found) {
-                    state = 'DELETE_CONFIRM';
-                    addMsg("⚠️ Digite o <b>número ID</b> (etiqueta preta) para apagar:", 'received', true);
-                } else {
-                    addMsg("Não achei. Tente buscar de outra forma.", 'received');
-                }
+                if (doSmartSearch(msg, true)) { state = 'DELETE_CONFIRM'; addMsg("Digite o <b>ID</b> (etiqueta preta) p/ apagar:", 'received', true); } 
+                else { addMsg("Não achei.", 'received'); }
                 break;
-
             case 'DELETE_CONFIRM':
                 const idDel = parseInt(m);
                 const idx = db.parts.findIndex(p => p.id === idDel);
-                if (idx > -1) {
-                    const removed = db.parts.splice(idx, 1)[0];
-                    saveCloud(); 
-                    addMsg(`🗑️ <b>${removed.name}</b> removido.`, 'received', true);
-                    resetToMenu(false);
-                } else {
-                    addMsg("❌ ID inválido. Digite o número da etiqueta preta.", 'received');
-                }
+                if (idx > -1) { db.parts.splice(idx, 1)[0]; saveCloud(); addMsg(`🗑️ Removido.`, 'received'); resetToMenu(false); } 
+                else { addMsg("ID inválido.", 'received'); }
                 break;
         }
     }
 
     function resetToMenu(isStart) {
-        state = 'MAIN';
-        temp = {};
-        let greeting = isStart ? "👋 Bem-vindo ao <b>PartDex</b>.<br>" : "";
-        addMsg(`${greeting}📋 <b>Menu Principal</b><br><br>1️⃣ Cadastrar Peça<br>2️⃣ Consultar Peça<br>3️⃣ Consultar Frota<br>4️⃣ Excluir Peça`, 'received', true);
+        state = 'MAIN'; temp = {};
+        addMsg(isStart ? "👋 <b>PartDex</b> iniciado." : "📋 <b>Menu</b><br>1️⃣ Cadastrar<br>2️⃣ Consultar<br>3️⃣ Frota<br>4️⃣ Excluir", 'received', true);
     }
 
     function savePart() {
         const nextId = db.parts.length > 0 ? Math.max(...db.parts.map(p => p.id)) + 1 : 101;
-        db.parts.push({
-            id: nextId,
-            vehicle: temp.vehicle,
-            name: temp.partName,
-            code: temp.partCode
-        });
-        saveCloud(); 
+        db.parts.push({ id: nextId, vehicle: temp.vehicle, name: temp.partName, code: temp.partCode });
+        saveCloud();
     }
 
     function showFleetSummary() {
         let html = '<div class="dashboard-grid">';
-        if(db.vehicles.length === 0) { addMsg("Garagem vazia.", 'received'); return; }
-
+        if(db.vehicles.length === 0) { addMsg("Vazio.", 'received'); return; }
         db.vehicles.forEach(v => {
-            const count = db.parts.filter(p => p.vehicle === v).length;
-            html += `
-                <div class="dash-card">
-                    <div class="dash-title">🚗 ${v}</div>
-                    <div style="font-size:12px; color:#666;">${count} itens</div>
-                </div>
-            `;
+            const c = db.parts.filter(p => p.vehicle === v).length;
+            html += `<div class="dash-card"><div class="dash-title">🚗 ${v}</div><div style="font-size:10px; color:#666;">${c} peças</div></div>`;
         });
-        html += '</div>';
-        addMsg(html, 'received', true);
+        html += '</div>'; addMsg(html, 'received', true);
     }
 
     function showCarParts(carId) {
         const parts = db.parts.filter(p => p.vehicle === carId);
-        if (parts.length === 0) {
-            addMsg(`O carro ${carId} não tem peças cadastradas.`, 'received');
-        } else {
-            addMsg(`🛠️ <b>Peças do ${carId}:</b>`, 'received', true);
+        if (parts.length === 0) { addMsg(`Carro vazio.`, 'received'); } else {
+            addMsg(`🛠️ <b>${carId}:</b>`, 'received', true);
             parts.forEach(p => {
-                const html = `
-                    <div class="part-card">
-                        <div class="part-card-body">
-                            <div class="part-card-title">${p.name}</div>
-                            <div class="part-card-detail">🔢 Ref: ${p.code}</div>
-                        </div>
-                    </div>`;
-                addMsg(html, 'received', true);
+                addMsg(`<div class="part-card"><div class="part-card-body"><div class="part-card-title">${p.name}</div><div class="part-card-detail">Ref: ${p.code}</div></div></div>`, 'received', true);
             });
         }
     }
@@ -474,35 +385,24 @@
     function doSmartSearch(query, isDeleteMode) {
         const terms = query.toLowerCase().split(' ').filter(t => t.length > 0);
         if (terms.length === 0) return false;
-
         const results = db.parts.filter(p => {
-            const fullString = (p.name + " " + p.code + " " + p.vehicle).toLowerCase();
-            return terms.every(term => fullString.includes(term));
+            const full = (p.name + " " + p.code + " " + p.vehicle).toLowerCase();
+            return terms.every(term => full.includes(term));
         });
-
-        if (results.length === 0) {
-            addMsg(`🚫 Nada encontrado para "${query}".`, 'received');
-            return false;
-        } else {
-            addMsg(`🔎 Encontrei ${results.length} resultados:`, 'received');
+        if (results.length === 0) { addMsg(`Nada encontrado.`, 'received'); return false; } 
+        else {
+            addMsg(`🔎 ${results.length} encontrados:`, 'received');
             results.forEach(p => {
                 const idDisplay = isDeleteMode ? `<span class="id-tag">${p.id}</span>` : '';
-                const html = `
-                    <div class="part-card">
-                        <div class="part-card-body">
-                            <div class="part-card-title">${p.name} ${idDisplay}</div>
-                            <div class="part-card-detail">🚗 ${p.vehicle} | 🔢 ${p.code}</div>
-                        </div>
-                    </div>`;
-                addMsg(html, 'received', true);
+                addMsg(`<div class="part-card"><div class="part-card-body"><div class="part-card-title">${p.name} ${idDisplay}</div><div class="part-card-detail">🚗 ${p.vehicle} | 🔢 ${p.code}</div></div></div>`, 'received', true);
             });
             return true;
         }
     }
-    
-    // Animação de Loading CSS
+
+    // Animação Bounce
     const styleSheet = document.createElement("style");
-    styleSheet.innerText = `@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }`;
+    styleSheet.innerText = `@keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }`;
     document.head.appendChild(styleSheet);
 </script>
 </body>
