@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PartDex - Prateleira Digital</title>
+    <title>PartDex - MultiClient</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* --- CSS ESTILO WHATSAPP (PartDex Theme) --- */
+        /* --- CSS BASE --- */
         :root {
             --wa-bg-color: #E5DDD5;
             --wa-header-color: #075E54;
@@ -14,84 +15,76 @@
             --wa-chat-outgoing: #DCF8C6;
             --wa-accent: #128C7E;
             --wa-dark-text: #303030;
-            --wa-light-text: #8C8C8C;
         }
+        body, html { margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #dcdcdc; height: 100%; display: flex; justify-content: center; align-items: center; }
+        .phone-container { width: 100%; max-width: 414px; height: 100vh; max-height: 896px; background-color: var(--wa-bg-color); display: flex; flex-direction: column; box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
 
-        body, html {
-            margin: 0; padding: 0; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #dcdcdc; height: 100%; display: flex; justify-content: center; align-items: center;
-        }
-
-        .phone-container {
-            width: 100%; max-width: 414px; height: 100vh; max-height: 896px;
-            background-color: var(--wa-bg-color); display: flex; flex-direction: column;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1); position: relative;
-        }
-
-        .chat-header {
-            background-color: var(--wa-header-color); color: var(--wa-header-text); padding: 10px 15px;
-            display: flex; align-items: center; z-index: 10;
-        }
-
-        .header-avatar {
-            width: 40px; height: 40px; background-color: #ccc; border-radius: 50%; margin-right: 10px;
-            background-image: url('https://placehold.co/40x40/128C7E/FFFFFF/png?text=PD'); /* PD = PartDex */
-            background-size: cover;
-        }
-
+        /* HEADER */
+        .chat-header { background-color: var(--wa-header-color); color: var(--wa-header-text); padding: 10px 15px; display: flex; align-items: center; justify-content: space-between; z-index: 10; }
+        .header-left { display: flex; align-items: center; }
+        .header-avatar { width: 40px; height: 40px; background-color: #ccc; border-radius: 50%; margin-right: 10px; background-image: url('https://placehold.co/40x40/128C7E/FFFFFF/png?text=PD'); background-size: cover; }
         .header-info h4 { margin: 0; font-size: 16px; font-weight: 500; }
         .header-info p { margin: 2px 0 0 0; font-size: 12px; opacity: 0.8; }
+        .id-badge { font-size: 10px; background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 4px; }
 
-        .chat-box {
-            flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 10px;
-        }
-
-        .message {
-            max-width: 85%; padding: 8px 12px; border-radius: 8px; position: relative;
-            font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word;
-        }
-
+        /* CHAT AREA */
+        .chat-box { flex: 1; overflow-y: auto; padding: 20px 15px; display: flex; flex-direction: column; gap: 10px; }
+        .message { max-width: 85%; padding: 8px 12px; border-radius: 8px; position: relative; font-size: 14px; line-height: 1.4; box-shadow: 0 1px 1px rgba(0,0,0,0.1); word-wrap: break-word; }
         .message.received { background-color: var(--wa-chat-incoming); align-self: flex-start; border-top-left-radius: 0; }
         .message.sent { background-color: var(--wa-chat-outgoing); align-self: flex-end; border-top-right-radius: 0; color: var(--wa-dark-text); }
-        
-        .message-time {
-            display: block; font-size: 10px; color: var(--wa-light-text); text-align: right; margin-top: 4px;
-        }
+        .message-time { display: block; font-size: 10px; color: #8C8C8C; text-align: right; margin-top: 4px; }
 
-        /* CARD DE PEÇA */
-        .part-card {
-            background: #f9f9f9; border-radius: 8px; overflow: hidden; margin-top: 5px; border: 1px solid #eee;
-        }
+        /* CARDS */
+        .part-card { background: #f9f9f9; border-radius: 8px; overflow: hidden; margin-top: 5px; border: 1px solid #eee; }
         .part-card-body { padding: 10px; }
         .part-card-title { font-weight: bold; font-size: 15px; margin-bottom: 5px; color: var(--wa-dark-text); display: flex; justify-content: space-between; }
         .part-card-detail { font-size: 13px; color: #555; margin-bottom: 2px; }
         .id-tag { background: #333; color: #fff; padding: 2px 6px; border-radius: 4px; font-size: 10px; }
-
-        /* DASHBOARD GRID */
+        
         .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-        .dash-card {
-            background: white; padding: 10px; border-radius: 8px; text-align: center;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 3px solid var(--wa-accent);
-        }
-        .dash-title { font-weight: bold; font-size: 14px; margin-bottom: 5px; }
-
+        .dash-card { background: white; padding: 10px; border-radius: 8px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border-top: 3px solid var(--wa-accent); }
+        
+        /* INPUT */
         .chat-input-area { background-color: #F0F0F0; padding: 10px; display: flex; align-items: center; }
         .chat-input { flex: 1; border: none; border-radius: 20px; padding: 10px 15px; font-size: 15px; outline: none; }
-        .send-btn {
-            background-color: var(--wa-accent); color: white; border: none; width: 40px; height: 40px;
-            border-radius: 50%; margin-left: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center;
-        }
+        .send-btn { background-color: var(--wa-accent); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; margin-left: 10px; cursor: pointer; display: flex; justify-content: center; align-items: center; }
+
+        /* TELA DE LOGIN (ACESSO) */
+        #login-screen { position: absolute; top:0; left:0; width:100%; height:100%; background: var(--wa-bg-color); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 20px; text-align: center; }
+        .login-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); width: 80%; max-width: 300px; }
+        .login-title { color: var(--wa-header-color); margin-bottom: 20px; }
+        .login-input { width: 90%; padding: 12px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; font-size: 16px; text-align: center; text-transform: uppercase; }
+        .login-btn { background-color: var(--wa-accent); color: white; padding: 12px; border: none; border-radius: 5px; width: 100%; font-size: 16px; cursor: pointer; }
+        #loading-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(255,255,255,0.9); display: none; justify-content: center; align-items: center; z-index: 200; flex-direction: column;}
     </style>
 </head>
 <body>
 
 <div class="phone-container">
-    <div class="chat-header">
-        <div class="header-avatar"></div>
-        <div class="header-info">
-            <h4>PartDex ⚙️</h4>
-            <p>online</p>
+    
+    <div id="login-screen">
+        <div class="login-box">
+            <h2 class="login-title">PartDex ☁️</h2>
+            <p style="font-size:14px; color:#666; margin-bottom:20px;">Digite seu Código de Frota para acessar:</p>
+            <input type="text" id="access-code-input" class="login-input" placeholder="EX: FROTA01">
+            <button class="login-btn" onclick="handleLogin()">ACESSAR</button>
         </div>
+    </div>
+
+    <div id="loading-overlay">
+        <div style="font-size:30px; margin-bottom:10px;">☁️</div>
+        <div id="loading-text">Sincronizando...</div>
+    </div>
+
+    <div class="chat-header">
+        <div class="header-left">
+            <div class="header-avatar"></div>
+            <div class="header-info">
+                <h4>PartDex</h4>
+                <p>online</p>
+            </div>
+        </div>
+        <div class="id-badge" id="display-id">...</div>
     </div>
 
     <div class="chat-box" id="chat-box"></div>
@@ -103,28 +96,113 @@
 </div>
 
 <script>
-    /* --- 1. BANCO DE DADOS & PERSISTÊNCIA --- */
-    let db = JSON.parse(localStorage.getItem('partdexDB')) || {
-        vehicles: [],
-        parts: []
+    /* ============================================================
+       CONFIGURAÇÃO DO SUPABASE (JÁ PREENCHIDO COM SUAS CHAVES)
+       ============================================================ */
+    const SUPABASE_URL = 'https://exrnklefvzfkhtmgfurn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV4cm5rbGVmdnpma2h0bWdmdXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjcwOTk2NjcsImV4cCI6MjA4MjY3NTY2N30.wpPJr594-fmxqT33v1pfu2hDYla565CaeZQar0HZWYQ';
+    /* ============================================================ */
+
+    const { createClient } = supabase;
+    const _supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+    
+    let db = { vehicles: [], parts: [] };
+    let CLIENT_ID = null; // Será definido no login
+
+    /* --- LOGIN E INICIALIZAÇÃO --- */
+    
+    // Verifica se já tem login salvo ao abrir
+    window.onload = function() {
+        const savedId = localStorage.getItem('partdex_client_id');
+        if (savedId) {
+            document.getElementById('access-code-input').value = savedId;
+            handleLogin(savedId);
+        }
     };
 
-    function saveData() {
-        localStorage.setItem('partdexDB', JSON.stringify(db));
+    async function handleLogin(manualId = null) {
+        let code = manualId || document.getElementById('access-code-input').value.trim().toUpperCase();
+        
+        if (!code || code.length < 3) {
+            alert("Por favor, digite um código válido (mínimo 3 letras/números).");
+            return;
+        }
+
+        // Bloqueia caracteres especiais para evitar problemas na URL
+        code = code.replace(/[^A-Z0-9-_]/g, ''); 
+
+        showLoading("Acessando Banco de Dados...");
+        CLIENT_ID = code;
+        
+        try {
+            // Tenta buscar os dados desse cliente específico
+            let { data, error } = await _supabase
+                .from('fleet_data')
+                .select('content')
+                .eq('id', CLIENT_ID)
+                .single();
+
+            if (error && error.code !== 'PGRST116') { // PGRST116 é "linha não encontrada", o que é ok (novo cliente)
+                throw error;
+            }
+
+            if (data && data.content) {
+                db = data.content; // Cliente existente: carrega dados
+            } else {
+                // Novo cliente: Inicia banco vazio e já cria na nuvem
+                db = { vehicles: [], parts: [] };
+                await _supabase.from('fleet_data').insert([{ id: CLIENT_ID, content: db }]);
+            }
+
+            // Sucesso
+            localStorage.setItem('partdex_client_id', CLIENT_ID); // Salva no celular para não pedir de novo
+            document.getElementById('login-screen').style.display = 'none'; // Some login
+            document.getElementById('display-id').innerText = CLIENT_ID; // Mostra ID no topo
+            hideLoading();
+            resetToMenu(true);
+
+        } catch (err) {
+            console.error(err);
+            alert("Erro de conexão. Verifique sua internet.");
+            hideLoading();
+        }
     }
 
-    /* --- 2. CONFIGURAÇÃO INICIAL --- */
+    async function saveCloud() {
+        if (!CLIENT_ID) return;
+        const statusEl = document.getElementById('display-id');
+        const originalText = statusEl.innerText;
+        statusEl.innerText = "Salvando...";
+        
+        try {
+            const { error } = await _supabase
+                .from('fleet_data')
+                .update({ content: db })
+                .eq('id', CLIENT_ID);
+
+            if (error) throw error;
+            statusEl.innerText = "Salvo ✓";
+            setTimeout(() => statusEl.innerText = CLIENT_ID, 2000);
+        } catch (err) {
+            console.error("Erro ao salvar:", err);
+            statusEl.innerText = "Erro ao Salvar";
+        }
+    }
+
+    function showLoading(msg) {
+        document.getElementById('loading-overlay').style.display = 'flex';
+        document.getElementById('loading-text').innerText = msg;
+    }
+    function hideLoading() {
+        document.getElementById('loading-overlay').style.display = 'none';
+    }
+
+    /* --- LÓGICA DO CHAT (IGUAL ANTES) --- */
     let state = 'MAIN'; 
     let temp = {}; 
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
 
-    // Início Automático
-    window.onload = function() {
-        setTimeout(() => resetToMenu(true), 500);
-    };
-
-    /* --- 3. CORE DO CHAT --- */
     function sendMessage() {
         const text = userInput.value.trim();
         if (!text) return;
@@ -145,16 +223,13 @@
         const d = new Date();
         time.innerText = `${d.getHours()}:${d.getMinutes().toString().padStart(2,'0')}`;
         div.appendChild(time);
-        
         chatBox.appendChild(div);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    /* --- 4. LÓGICA DE NEGÓCIOS --- */
     function processResponse(msg) {
         const m = msg.toLowerCase();
 
-        // SAÍDA GLOBAL
         if (['menu', 'sair', 'cancelar', 'voltar'].includes(m)) {
             resetToMenu(false);
             return;
@@ -185,16 +260,13 @@
                 }
                 break;
 
-            /* --- CADASTRO --- */
             case 'REG_VEHICLE':
                 const vInput = msg.toUpperCase();
                 temp.vehicle = vInput;
-                
                 if (!db.vehicles.includes(vInput)) {
                     db.vehicles.push(vInput);
-                    saveData(); 
+                    saveCloud(); 
                 }
-                
                 addMsg(`✅ Carro <b>${vInput}</b> selecionado.`, 'received', true);
                 state = 'REG_PART_NAME';
                 addMsg(`Qual <b>peça</b> adicionar ao ${vInput}?`, 'received', true);
@@ -223,7 +295,6 @@
                 }
                 break;
 
-            /* --- VISUALIZAÇÃO --- */
             case 'SEARCH':
                 doSmartSearch(msg, false);
                 state = 'MAIN';
@@ -239,7 +310,6 @@
                 }
                 break;
 
-            /* --- EXCLUSÃO --- */
             case 'DELETE_SEARCH':
                 const found = doSmartSearch(msg, true); 
                 if (found) {
@@ -255,7 +325,7 @@
                 const idx = db.parts.findIndex(p => p.id === idDel);
                 if (idx > -1) {
                     const removed = db.parts.splice(idx, 1)[0];
-                    saveData(); 
+                    saveCloud(); 
                     addMsg(`🗑️ <b>${removed.name}</b> removido.`, 'received', true);
                     resetToMenu(false);
                 } else {
@@ -264,8 +334,6 @@
                 break;
         }
     }
-
-    // --- FUNÇÕES AUXILIARES ---
 
     function resetToMenu(isStart) {
         state = 'MAIN';
@@ -282,7 +350,7 @@
             name: temp.partName,
             code: temp.partCode
         });
-        saveData(); 
+        saveCloud(); 
     }
 
     function showFleetSummary() {
